@@ -1,5 +1,13 @@
 import numpy as np
 
+def accuracy(inferences, labels, target):
+    mask_t = labels != target
+    mask_dif = inferences != target
+    mask = mask_dif == mask_t
+    mask = mask != True
+    matches = np.ma.array(np.ones(len(inferences)),mask=mask)
+    return matches.sum()/(len(inferences)-2)
+
 def ctrl_bin(state, level):
 
         state_bin = ''
