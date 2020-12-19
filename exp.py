@@ -20,9 +20,10 @@ def print_res(cq):
 def run_classifier(params):
     dataexp = ProcessData()
     if(params["show_data"]):
-        dataexp.show_data()
+        dataexp.show_data(55,54,61)
     if(params["circuit"]=="QOCC"):
-        qclass = QOCClassifier(np.array([0.0,1.0]), np.array([0.789,0.615]), np.array([-0.549,0.836]))
+        #qclass = QOCClassifier(dataexp.norm[33,:], dataexp.norm[2,:], dataexp.norm[51,:])
+        qclass = QOCClassifier(dataexp.norm[55,:], dataexp.norm[54,:], dataexp.norm[58,:])
         qclass.run_classification()
 
         if(params["draw"]):

@@ -20,14 +20,15 @@ class ProcessData():
         for i in range(self.X.shape[0]):
             self.norm[i,:] = self.center[i,:]/a[i]
 
-    def show_data(self):
+    def show_data(self, x0, x1, xt):
 
         plt.figure(2, figsize=(8, 6))
         plt.clf()
 
         # Plot the training points
         #plt.scatter(self.norm[42:58, 0], self.norm[42:58, 1], c=np.concatenate((self.Y[42:54],[self.Y[54]+4],self.Y[55:58])))
-        plt.scatter(self.norm[:100, 0], self.norm[:100, 1], c=self.Y[:100])
+        #plt.scatter(self.norm[:100, 0], self.norm[:100, 1], c=self.Y[:100])
+        plt.scatter(np.array([self.norm[x0, 0], self.norm[x1, 0], self.norm[xt,0]]), np.array([self.norm[x0, 1], self.norm[x1, 1], self.norm[xt,1]]), c=np.array([self.Y[x0], self.Y[x1], self.Y[xt]]))
         plt.xlabel('Sepal length')
         plt.ylabel('Sepal width')
 

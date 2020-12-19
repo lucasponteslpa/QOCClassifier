@@ -1,6 +1,6 @@
 import numpy as np
 
-def ctrl_bin(self, state, level):
+def ctrl_bin(state, level):
 
         state_bin = ''
         i = state
