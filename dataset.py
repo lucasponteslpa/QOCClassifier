@@ -8,7 +8,7 @@ class ProcessData():
     def __init__(self, name='iris'):
         self.data_name = name
         self.iris = datasets.load_iris()
-        self.X = self.iris.data[:, :2]  # we only take the first two features.
+        self.X = self.iris.data[:, 1:3]  # we only take the first two features.
         self.Y = self.iris.target
 
         self.mean = np.array([np.mean(self.X[:,i]) for i in range(self.X.shape[1])])
@@ -20,15 +20,16 @@ class ProcessData():
         for i in range(self.X.shape[0]):
             self.norm[i,:] = self.center[i,:]/a[i]
 
-    def show_data(self, x0, x1, xt):
+    def show_data(self, x0, x1, xt, all_data=False):
 
         plt.figure(2, figsize=(8, 6))
         plt.clf()
 
         # Plot the training points
-        #plt.scatter(self.norm[42:58, 0], self.norm[42:58, 1], c=np.concatenate((self.Y[42:54],[self.Y[54]+4],self.Y[55:58])))
-        #plt.scatter(self.norm[:100, 0], self.norm[:100, 1], c=self.Y[:100])
-        plt.scatter(np.array([self.norm[x0, 0], self.norm[x1, 0], self.norm[xt,0]]), np.array([self.norm[x0, 1], self.norm[x1, 1], self.norm[xt,1]]), c=np.array([self.Y[x0], self.Y[x1], self.Y[xt]]))
+        if all_data:
+            plt.scatter(self.norm[:100, 0], self.norm[:100, 1], c=self.Y[:100])
+        else:
+            plt.scatter(np.array([self.norm[x0, 0], self.norm[x1, 0], self.norm[xt,0]]), np.array([self.norm[x0, 1], self.norm[x1, 1], self.norm[xt,1]]), c=np.array([self.Y[x0], self.Y[x1], self.Y[xt]]))
         plt.xlabel('Sepal length')
         plt.ylabel('Sepal width')
 
