@@ -22,9 +22,11 @@ def print_res(cq):
     return answer
 
 def run_classifier(params):
+    dataskin = ProcessData(name=params['dataset'])
     dataexp = ProcessData()
     if(params["show_data"]):
-        dataexp.show_data( 55, 54, 61, all_data=True)
+        #dataexp.show_data( 55, 54, 61, all_data=True)
+        dataskin.show_data( 55, 54, 61, all_data=True)
     if(params["circuit"]=="QOCC"):
         #qclass = QOCClassifier(dataexp.norm[33,:], dataexp.norm[2,:], dataexp.norm[51,:])
         #qclass = QOCClassifier(dataexp.norm[55,:], dataexp.norm[54,:], dataexp.norm[i,:])
@@ -87,6 +89,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Preprocess')
     parser.add_argument('--circuit', type=str, help='Define what circuit will be used')
+    parser.add_argument('--dataset', type=str, default='iris', help='Choose what dataset will be used')
     parser.add_argument('--show_data', type=bool, default=False, help='Plot the data distribution')
     parser.add_argument('--train', type=bool, default=False, help='Search for the best two samples')
     parser.add_argument('--test', type=int, default=0, help='The test sample')

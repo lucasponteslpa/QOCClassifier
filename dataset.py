@@ -2,15 +2,45 @@ import matplotlib.pyplot as plt
 from sklearn import datasets
 import numpy as np
 from pdb import set_trace
+import tensorflow.compat.v1 as tf
+import pandas as pd
 
 class ProcessData():
 
     def __init__(self, name='iris'):
-        self.data_name = name
-        self.iris = datasets.load_iris()
-        self.X = self.iris.data[:, 1:3]  # we only take the first two features.
-        self.Y = self.iris.target
+        if name == 'skin':
+            TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00229/Skin_NonSkin.txt'
 
+            # CHOOSE THE SAMPLES ACCORDINGLY WITH DATADISTRIBUTION OF THE CLASSES
+            # MAKE BOOTSTRAP(?)
+            train_file_path = tf.keras.utils.get_file("segmentation.data.csv", TRAIN_DATA_URL)
+            dataset = pd.read_csv(train_file_path).to_numpy()
+            data = np.array([ i.split('\t') for i in dataset[:,0]]).astype(np.int32)
+
+            mask_c1 = data[:,3] != 1
+            c1s = np.ma.array(data[:,3], mask= mask_c1)
+            n_c1 = c1s.sum()
+
+            split_data = lambda dat,i,l: dat[i,0:2] if i<l else dat[i+n_c1,0:2]
+            split_class = lambda dat,i,l: dat[i,3] if i<l else dat[i+n_c1,3]
+            self.X = np.array([split_data(data,i,1000) for i in range(2000)])
+            self.Y = np.array([split_class(data,i,1000) for i in range(2000)])
+        elif name == 'Habermans':
+            TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data'
+
+            # MAKE BOOTSTRAP
+            train_file_path = tf.keras.utils.get_file("haberman.data.csv", TRAIN_DATA_URL)
+            dataset = pd.read_csv(train_file_path).to_numpy()
+
+            data = dataset[:,0:3:2]
+            self.X = data  # we only take the first two features.
+            self.Y = dataset[:,3]
+            
+        else:
+            iris = datasets.load_iris()
+            self.X = iris.data[:, 1:3]  # we only take the first two features.
+            self.Y = iris.target
+        #set_trace()
         self.mean = np.array([np.mean(self.X[:,i]) for i in range(self.X.shape[1])])
         self.var = np.array([np.var(self.X[:,i]) for i in range(self.X.shape[1])])
         self.center = (self.X - np.reshape(self.mean,(1,self.X.shape[1])))/np.reshape(self.var,(1,self.X.shape[1]))
@@ -27,11 +57,11 @@ class ProcessData():
 
         # Plot the training points
         if all_data:
-            plt.scatter(self.norm[:100, 0], self.norm[:100, 1], c=self.Y[:100])
+            plt.scatter(self.norm[:, 0], self.norm[:, 1], c=self.Y)
         else:
             plt.scatter(np.array([self.norm[x0, 0], self.norm[x1, 0], self.norm[xt,0]]), np.array([self.norm[x0, 1], self.norm[x1, 1], self.norm[xt,1]]), c=np.array([self.Y[x0], self.Y[x1], self.Y[xt]]))
-        plt.xlabel('Sepal length')
-        plt.ylabel('Sepal width')
+        plt.xlabel('Feature 1')
+        plt.ylabel('Feature 2')
 
         plt.xlim(-1.5, 1.5)
         plt.ylim(-1.5, 1.5)
