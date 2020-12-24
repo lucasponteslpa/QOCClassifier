@@ -8,26 +8,7 @@ from tqdm import tqdm
 from utils import accuracy, get_res, print_res
 from sklearn import svm, tree, neighbors, linear_model
 
-def SGD_classifier(data):
-    clf = linear_model.SGDClassifier()
-    clf.fit(data.X,data.Y)
-    inferences = clf.predict(data.X)
-    return accuracy(inferences, data.Y)
-
-def KNN_classifier(data):
-    clf = neighbors.KNeighborsClassifier()
-    clf.fit(data.X,data.Y)
-    inferences = clf.predict(data.X)
-    return accuracy(inferences, data.Y)
-
-def DTrees_classifier(data):
-    clf = tree.DecisionTreeClassifier()
-    clf.fit(data.X,data.Y)
-    inferences = clf.predict(data.X)
-    return accuracy(inferences, data.Y)
-
-def SVM_classfier(data):
-    clf = svm.SVC()
+def classic_classifier(clf, data):
     clf.fit(data.X,data.Y)
     inferences = clf.predict(data.X)
     return accuracy(inferences, data.Y)
@@ -71,16 +52,17 @@ def run_classifier(params):
     if(params["circuit"]=="QOCC"):
 
         if params["train"]:
+            # IMPLEMENT (CROSS?) VALIDATION
             best_acc, x_0_c0, x_1_c0 = train(dataexp)
             print("Best Accuracy: "+str(best_acc))
             print("Sample 1 Choosed: "+str(x_0_c0))
             print("Sample 2 Choosed: "+str(x_1_c0))
             print("")
 
-            svm_acc = SVM_classfier(dataexp)
-            trees_acc = DTrees_classifier(dataexp)
-            knn_acc = KNN_classifier(dataexp)
-            sgd_acc = SGD_classifier(dataexp)
+            svm_acc = classic_classifier(svm.SVC(), dataexp)
+            trees_acc = classic_classifier(tree.DecisionTreeClassifier(), dataexp)
+            knn_acc = classic_classifier(neighbors.KNeighborsClassifier(), dataexp)
+            sgd_acc = classic_classifier(linear_model.SGDClassifier(), dataexp)
 
             print("QOCC accuracy: "+str(best_acc))
             print("SVM accuracy: "+str(svm_acc))
@@ -112,10 +94,10 @@ def run_classifier(params):
                         inferences[i] = dataexp.Y[x_0_c0]
 
             act_acc = accuracy(inferences, dataexp.Y, dataexp.Y[x_0_c0])
-            svm_acc = SVM_classfier(dataexp)
-            trees_acc = DTrees_classifier(dataexp)
-            knn_acc = KNN_classifier(dataexp)
-            sgd_acc = SGD_classifier(dataexp)
+            svm_acc = classic_classifier(svm.SVC(), dataexp)
+            trees_acc = classic_classifier(tree.DecisionTreeClassifier(), dataexp)
+            knn_acc = classic_classifier(neighbors.KNeighborsClassifier(), dataexp)
+            sgd_acc = classic_classifier(linear_model.SGDClassifier(), dataexp)
 
             print("QOCC accuracy: "+str(act_acc))
             print("SVM accuracy: "+str(svm_acc))
