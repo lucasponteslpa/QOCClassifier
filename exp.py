@@ -13,6 +13,18 @@ def classic_classifier(clf, data):
     inferences = clf.predict(data.X)
     return accuracy(inferences, data.Y)
 
+def print_acc(data, q_acc):
+    svm_acc = classic_classifier(svm.SVC(), data)
+    trees_acc = classic_classifier(tree.DecisionTreeClassifier(), data)
+    knn_acc = classic_classifier(neighbors.KNeighborsClassifier(), data)
+    sgd_acc = classic_classifier(linear_model.SGDClassifier(), data)
+
+    print("QOCC accuracy: "+str(q_acc))
+    print("SVM accuracy: "+str(svm_acc))
+    print("DT accuracy: "+str(trees_acc))
+    print("KNN accuracy: "+str(knn_acc))
+    print("SGD accuracy: "+str(sgd_acc))
+
 def train(dataexp):
     best_0 = 0
     best_1 = 0
@@ -57,20 +69,8 @@ def run_classifier(params):
             print("Best Accuracy: "+str(best_acc))
             print("Sample 1 Choosed: "+str(x_0_c0))
             print("Sample 2 Choosed: "+str(x_1_c0))
-            print("")
 
-            svm_acc = classic_classifier(svm.SVC(), dataexp)
-            trees_acc = classic_classifier(tree.DecisionTreeClassifier(), dataexp)
-            knn_acc = classic_classifier(neighbors.KNeighborsClassifier(), dataexp)
-            sgd_acc = classic_classifier(linear_model.SGDClassifier(), dataexp)
-
-            print("QOCC accuracy: "+str(best_acc))
-            print("SVM accuracy: "+str(svm_acc))
-            print("DT accuracy: "+str(trees_acc))
-            print("KNN accuracy: "+str(knn_acc))
-            print("SGD accuracy: "+str(sgd_acc))
-            print("")
-
+            print_acc(dataexp, best_acc)
         else:
             # skin C1 0 18
             # iris C1 8 23
@@ -94,16 +94,7 @@ def run_classifier(params):
                         inferences[i] = dataexp.Y[x_0_c0]
 
             act_acc = accuracy(inferences, dataexp.Y, dataexp.Y[x_0_c0])
-            svm_acc = classic_classifier(svm.SVC(), dataexp)
-            trees_acc = classic_classifier(tree.DecisionTreeClassifier(), dataexp)
-            knn_acc = classic_classifier(neighbors.KNeighborsClassifier(), dataexp)
-            sgd_acc = classic_classifier(linear_model.SGDClassifier(), dataexp)
-
-            print("QOCC accuracy: "+str(act_acc))
-            print("SVM accuracy: "+str(svm_acc))
-            print("DT accuracy: "+str(trees_acc))
-            print("KNN accuracy: "+str(knn_acc))
-            print("SGD accuracy: "+str(sgd_acc))
+            print_acc(dataexp, act_acc)
 
     else:
 
