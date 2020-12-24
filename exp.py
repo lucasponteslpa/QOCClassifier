@@ -5,83 +5,127 @@ from qiskit.visualization import plot_histogram, circuit_drawer
 from pdb import set_trace
 import numpy as np
 from tqdm import tqdm
-from utils import accuracy
+from utils import accuracy, get_res, print_res
+from sklearn import svm, tree, neighbors, linear_model
 
-def print_state(cq):
-    backend = qiskit.Aer.get_backend('statevector_simulator')
-    job = qiskit.execute(cq, backend)
-    result = job.result()
-    print(result.get_statevector())
+def SGD_classifier(data):
+    clf = linear_model.SGDClassifier()
+    clf.fit(data.X,data.Y)
+    inferences = clf.predict(data.X)
+    return accuracy(inferences, data.Y)
 
-def print_res(cq):
-    backend = qiskit.Aer.get_backend('qasm_simulator')
-    results = qiskit.execute(cq, backend=backend, shots=1024).result()
-    answer = results.get_counts()
-    print(answer)
+def KNN_classifier(data):
+    clf = neighbors.KNeighborsClassifier()
+    clf.fit(data.X,data.Y)
+    inferences = clf.predict(data.X)
+    return accuracy(inferences, data.Y)
 
-    return answer
+def DTrees_classifier(data):
+    clf = tree.DecisionTreeClassifier()
+    clf.fit(data.X,data.Y)
+    inferences = clf.predict(data.X)
+    return accuracy(inferences, data.Y)
+
+def SVM_classfier(data):
+    clf = svm.SVC()
+    clf.fit(data.X,data.Y)
+    inferences = clf.predict(data.X)
+    return accuracy(inferences, data.Y)
+
+def train(dataexp):
+    best_0 = 0
+    best_1 = 0
+    best_acc = 0
+    with tqdm(total=1225) as t:
+        for x_0_c0 in range(49):
+            for x_1_c0 in range(x_0_c0+1,50):
+                inferences = np.zeros(100) - 1
+                for i in range(100):
+                    if(i != x_0_c0 and i != x_1_c0):
+                        qclass = QOCClassifier(dataexp.norm[x_0_c0,:], dataexp.norm[x_1_c0,:], dataexp.norm[i,:])
+                        qclass.run_classification()
+                        dic_measure = get_res(qclass.circuito)
+                        if not '1' in dic_measure:
+                            dic_measure['1'] = 0
+                        if not '0' in dic_measure:
+                            dic_measure['0'] = 0
+                        if dic_measure['0'] > dic_measure['1']:
+                            inferences[i] = dataexp.Y[x_0_c0]
+
+                act_acc = accuracy(inferences, dataexp.Y[:100], dataexp.Y[x_0_c0])
+                if best_acc < act_acc:
+                    best_acc = act_acc
+                    best_0 = x_0_c0
+                    best_1 = x_1_c0
+                acc_postfix = {"best":best_acc,"act":act_acc}
+                t.set_postfix(acc_postfix)
+                t.update()
+
+    return best_acc, best_0, best_1
 
 def run_classifier(params):
-    dataskin = ProcessData(name=params['dataset'])
-    dataexp = ProcessData()
+    dataexp = ProcessData(name=params['dataset'])
     if(params["show_data"]):
-        #dataexp.show_data( 55, 54, 61, all_data=True)
-        dataskin.show_data( 55, 54, 61, all_data=True)
+        dataexp.show_data( 55, 54, 61, all_data=True)
+
     if(params["circuit"]=="QOCC"):
-        #qclass = QOCClassifier(dataexp.norm[33,:], dataexp.norm[2,:], dataexp.norm[51,:])
-        #qclass = QOCClassifier(dataexp.norm[55,:], dataexp.norm[54,:], dataexp.norm[i,:])
-        x_0_c0 = 8
-        x_1_c0 = 23
-        x_0_c1 = 2
-        x_1_c1 = 34
+
         if params["train"]:
-            best_0 = 0
-            best_1 = 0
-            best_acc = 0
-            with tqdm(total=1225) as t:
-                for x_0_c0 in range(49):
-                    for x_1_c0 in range(x_0_c0+1,50):
-                        inferences = np.zeros(100) - 1
-                        for i in range(100):
-                            if(i != x_0_c0 and i != x_1_c0):
-                                qclass = QOCClassifier(dataexp.norm[x_0_c0,:], dataexp.norm[x_1_c0,:], dataexp.norm[i,:])
-                                qclass.run_classification()
-                                dic_measure = print_res(qclass.circuito)
-                                if not '1' in dic_measure:
-                                    dic_measure['1'] = 0
-                                if not '0' in dic_measure:
-                                    dic_measure['0'] = 0
-                                if dic_measure['0'] > dic_measure['1']:
-                                    inferences[i] = dataexp.Y[x_0_c0]
+            best_acc, x_0_c0, x_1_c0 = train(dataexp)
+            print("Best Accuracy: "+str(best_acc))
+            print("Sample 1 Choosed: "+str(x_0_c0))
+            print("Sample 2 Choosed: "+str(x_1_c0))
+            print("")
 
-                        act_acc = accuracy(inferences, dataexp.Y[:100],dataexp.Y[x_0_c0])
-                        if best_acc < act_acc:
-                            best_acc = act_acc
-                            best_0 = x_0_c0
-                            best_1 = x_1_c0
-                        acc_postfix = {"best":best_acc,"act":act_acc}
-                        t.set_postfix(acc_postfix)
-                        t.update()
-            print(best_acc)
-            print(best_0)
-            print(best_1)
+            svm_acc = SVM_classfier(dataexp)
+            trees_acc = DTrees_classifier(dataexp)
+            knn_acc = KNN_classifier(dataexp)
+            sgd_acc = SGD_classifier(dataexp)
+
+            print("QOCC accuracy: "+str(best_acc))
+            print("SVM accuracy: "+str(svm_acc))
+            print("DT accuracy: "+str(trees_acc))
+            print("KNN accuracy: "+str(knn_acc))
+            print("SGD accuracy: "+str(sgd_acc))
+            print("")
+
         else:
-            qclass = QOCClassifier(dataexp.norm[x_0_c0,:], dataexp.norm[x_1_c0,:], dataexp.norm[params['test'],:])
-            qclass.run_classification()
-            dic_measure = print_res(qclass.circuito)
-            print(dic_measure)
+            # skin C1 0 18
+            # iris C1 8 23
 
-        if(params["draw"]):
-            circuit_drawer(qclass.circuito,filename='qclass.tex',output='latex_source')
+            x_0_c0 = 8
+            x_1_c0 = 23
+            #x_0_c1 = 2
+            #x_1_c1 = 34
 
-        print_res(qclass.circuito)
-    #set_trace()
+            inferences = np.zeros(100) - 1
+            for i in range(100):
+                if(i != x_0_c0 and i != x_1_c0):
+                    qclass = QOCClassifier(dataexp.norm[x_0_c0,:], dataexp.norm[x_1_c0,:], dataexp.norm[i,:])
+                    qclass.run_classification()
+                    dic_measure = get_res(qclass.circuito)
+                    if not '1' in dic_measure:
+                        dic_measure['1'] = 0
+                    if not '0' in dic_measure:
+                        dic_measure['0'] = 0
+                    if dic_measure['0'] > dic_measure['1']:
+                        inferences[i] = dataexp.Y[x_0_c0]
+
+            act_acc = accuracy(inferences, dataexp.Y, dataexp.Y[x_0_c0])
+            svm_acc = SVM_classfier(dataexp)
+            trees_acc = DTrees_classifier(dataexp)
+            knn_acc = KNN_classifier(dataexp)
+            sgd_acc = SGD_classifier(dataexp)
+
+            print("QOCC accuracy: "+str(act_acc))
+            print("SVM accuracy: "+str(svm_acc))
+            print("DT accuracy: "+str(trees_acc))
+            print("KNN accuracy: "+str(knn_acc))
+            print("SGD accuracy: "+str(sgd_acc))
+
     else:
 
         mini = DBQClassifier()
-
-        if(params["draw"]):
-            circuit_drawer(mini.circuito,filename='minimum.tex',output='latex_source')
         print_res(mini.circuito)
 
 if __name__ == '__main__':
@@ -93,7 +137,6 @@ if __name__ == '__main__':
     parser.add_argument('--show_data', type=bool, default=False, help='Plot the data distribution')
     parser.add_argument('--train', type=bool, default=False, help='Search for the best two samples')
     parser.add_argument('--test', type=int, default=0, help='The test sample')
-    parser.add_argument('--draw', type=bool, default=False, help='Write a tex file with the circuit scheme')
 
     params = vars(parser.parse_args())
 
