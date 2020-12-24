@@ -1,5 +1,9 @@
 import numpy as np
 
+def likelihood( mu, var, samples):
+    lklh = (1/np.sqrt(2*np.pi*var))*np.exp((np.power(samples - mu,2))/var)
+    return np.prod(lklh)
+
 def accuracy(inferences, labels, target):
     mask_t = labels != target
     mask_dif = inferences != target
