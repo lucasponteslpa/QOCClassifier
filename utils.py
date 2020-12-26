@@ -26,17 +26,20 @@ def likelihood( mu, var, samples):
     return np.prod(lklh)
 
 def accuracy(inferences, labels, target=None):
+    #import pdb
+    #pdb.set_trace()
     if target != None:
         mask_t = labels != target
         mask_dif = inferences != target
         mask = mask_dif == mask_t
         mask = mask != True
-        matches = np.ma.array(np.ones(len(inferences)),mask=mask)
+        np.append(mask,[False])
+        matches = np.ma.array(np.ones(len(inferences+1)),mask=mask)
     else:
         mask = inferences != labels
-        matches = np.ma.array(np.ones(len(inferences)),mask=mask)
+        matches = np.ma.array(np.ones(len(inferences+1)),mask=mask)
 
-    return matches.sum()/len(inferences)
+    return matches.sum()/len(inferences) if matches.sum() is not np.ma.masked else 0.0
 
 def ctrl_bin(state, level):
 

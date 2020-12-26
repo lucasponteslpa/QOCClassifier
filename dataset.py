@@ -8,7 +8,10 @@ from utils import likelihood
 
 class ProcessData():
 
-    def __init__(self, name='iris'):
+    def __init__(self, name='iris', sample_len=1000, batch=100):
+        self.sample_len = sample_len
+        self.batch = batch
+        np.random.seed(132)
         if name == 'skin':
             TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00229/Skin_NonSkin.txt'
 
@@ -20,28 +23,33 @@ class ProcessData():
             c1s = np.ma.array(data[:,3], mask= mask_c1)
             n_c1 = c1s.sum()
 
-            c1_index = np.random.choice(range(n_c1),size=50)
-            c2_index = np.random.choice(range(n_c1,data.shape[0]),size=50)
+            # PUT SEED TO FIX THE RANDOMIZATION
+            c1_index = np.random.choice(range(n_c1),size=sample_len//2)
+            c2_index = np.random.choice(range(n_c1,data.shape[0]),size=sample_len//2)
             samples_index = np.append(c1_index,c2_index)
             self.X = data[samples_index,0:2]
             self.Y = data[samples_index,3]
+
+            self.X_b = np.append(self.X[:batch//2,:],self.X[sample_len//2:(sample_len+batch)//2, :], axis=0)
+            self.Y_b = np.append(self.Y[:batch//2],self.Y[sample_len//2:(sample_len+batch)//2])
 
         elif name == 'Habermans':
             TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data'
 
             train_file_path = tf.keras.utils.get_file("haberman.data.csv", TRAIN_DATA_URL)
-            dataset = pd.read_csv(train_file_path).to_numpy()
+            self.dataset = pd.read_csv(train_file_path).to_numpy()
 
-            mask_c1 = dataset[:,3] != 1
-            c1s = np.ma.array(dataset[:,3], mask= mask_c1)
+            mask_c1 = self.dataset[:,3] != 1
+            c1s = np.ma.array(self.dataset[:,3], mask= mask_c1)
             n_c1 = c1s.sum()
 
+            # PUT SEED TO FIX THE RANDOMIZATION
             c1_index = np.random.choice(range(n_c1),size=50)
-            c2_index = np.random.choice(range(n_c1,dataset.shape[0]),size=50)
+            c2_index = np.random.choice(range(n_c1,self.dataset.shape[0]),size=50)
             samples_index = np.append(c1_index,c2_index)
 
-            self.X = dataset[samples_index,0:3:2]
-            self.Y = dataset[samples_index,3]
+            self.X = self.dataset[samples_index,0:3:2]
+            self.Y = self.dataset[samples_index,3]
 
         else:
             iris = datasets.load_iris()
@@ -56,6 +64,17 @@ class ProcessData():
         self.norm = np.zeros((self.X.shape[0],self.X.shape[1]))
         for i in range(self.X.shape[0]):
             self.norm[i,:] = self.center[i,:]/a[i]
+
+        self.norm_b = np.append(self.norm[:batch//2,:],self.norm[sample_len//2:(sample_len+batch)//2, :], axis=0)
+
+    def update_batch(self, batch_index):
+        self.X_b = np.append(self.X[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
+                             self.X[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+        self.Y_b = np.append(self.Y[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2],
+                             self.Y[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2])
+        self.norm_b = np.append(self.norm[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
+                                self.norm[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+
 
     def show_data(self, x0, x1, xt, all_data=False):
 
