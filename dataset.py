@@ -64,7 +64,7 @@ class ProcessData():
         self.norm = np.zeros((self.X.shape[0],self.X.shape[1]))
         for i in range(self.X.shape[0]):
             self.norm[i,:] = self.center[i,:]/a[i]
-
+        self.center_b = np.append(self.center[:batch//2,:],self.center[sample_len//2:(sample_len+batch)//2, :], axis=0)
         self.norm_b = np.append(self.norm[:batch//2,:],self.norm[sample_len//2:(sample_len+batch)//2, :], axis=0)
 
     def update_batch(self, batch_index):
@@ -74,6 +74,8 @@ class ProcessData():
                              self.Y[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2])
         self.norm_b = np.append(self.norm[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
                                 self.norm[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+        self.center_b = np.append(self.center[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
+                                self.center[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
 
 
     def show_data(self, x0, x1, xt, all_data=False):
