@@ -87,7 +87,9 @@ class ProcessData():
         if all_data:
             plt.scatter(self.norm[:, 0], self.norm[:, 1], c=self.Y)
         else:
-            plt.scatter(np.array([self.norm[x0, 0], self.norm[x1, 0], self.norm[xt,0]]), np.array([self.norm[x0, 1], self.norm[x1, 1], self.norm[xt,1]]), c=np.array([self.Y[x0], self.Y[x1], self.Y[xt]]))
+            plt.scatter(np.array([self.norm[x0, 0], self.norm[x1, 0], self.norm[xt,0]]),
+                        np.array([self.norm[x0, 1], self.norm[x1, 1], self.norm[xt,1]]),
+                        c=np.array([self.Y[x0], self.Y[x1], self.Y[xt]]))
         plt.xlabel('Feature 1')
         plt.ylabel('Feature 2')
 
