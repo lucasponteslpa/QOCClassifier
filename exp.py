@@ -18,9 +18,9 @@ def classic_classifier(clf, data, batch=100, val=10):
     inferences = clf.predict(val_data)
     return accuracy(inferences, val_target)
 
-def print_acc(data, q_acc, batch=100, val=10, kfold=10):
+def print_acc(data, q_acc, batch=100, val=10, split=10):
     svm_mean, trees_mean, knn_mean, sgd_mean = 0, 0, 0, 0
-    for i in range(kfold):
+    for i in range(split):
         data.update_batch(i)
         svm_acc = classic_classifier(svm.SVC(), data, batch, val)
         trees_acc = classic_classifier(tree.DecisionTreeClassifier(), data, batch, val)
@@ -67,6 +67,7 @@ def train(dataexp, c=1, batch=100, val=10):
                 acc_postfix = {"best":best_acc,"act":act_acc}
                 t.set_postfix(acc_postfix)
                 t.update()
+
     inferences = np.zeros(val) - 1
     for i in range(val):
         #set_trace()
@@ -85,7 +86,7 @@ def train(dataexp, c=1, batch=100, val=10):
     return val_acc, best_acc, best_0, best_1
 
 def run_classifier(params):
-    dataexp = ProcessData(name=params['dataset'], sample_len=10*params['batch'], batch=params['batch'])
+    dataexp = ProcessData(name=params['dataset'], sample_len=params['split']*params['batch'], batch=params['batch'])
     if(params["show_data"]):
         dataexp.show_data( 55, 54, 61, all_data=True)
 
@@ -94,9 +95,9 @@ def run_classifier(params):
         if params["train"]:
             # IMPLEMENT (CROSS?) VALIDATION
             val_acc_mean = 0
-            for i in range(10):
+            for i in range(dataexp.sample_len//dataexp.batch):
                 dataexp.update_batch(i)
-                val_acc, best_acc, x_0_c0, x_1_c0 = train(dataexp, batch=params['batch'], val=params['val'])
+                val_acc, best_acc, x_0_c0, x_1_c0 = train(dataexp, batch=dataexp.batch, val=params['val'])
                 val_acc_mean += val_acc
                 print("Best Accuracy: "+str(best_acc))
                 print("Validation Accuracy: "+str(val_acc))
@@ -104,15 +105,11 @@ def run_classifier(params):
                 print("Sample 2 Choosed: "+str(x_1_c0))
 
             val_acc_mean /= 10
-            print_acc(dataexp, val_acc_mean, batch=params['batch'], val=params['val'])
-        else:
-            # skin C1 0 18
-            # iris C1 8 23
+            print_acc(dataexp, val_acc_mean, batch=dataexp.batch, val=params['val'], split=dataexp.sample_len//dataexp.batch)
 
+        else:
             x_0_c0 = 8
             x_1_c0 = 23
-            #x_0_c1 = 2
-            #x_1_c1 = 34
 
             inferences = np.zeros(100) - 1
             for i in range(100):
@@ -146,7 +143,7 @@ if __name__ == '__main__':
     parser.add_argument('--test', type=int, default=0, help='The test sample')
     parser.add_argument('--batch', type=int, default=100, help='The size of batch')
     parser.add_argument('--val', type=int, default=10, help='The size of validation dataset')
-    parser.add_argument('--kfold', type=int, default=10, help='The size of k-fold cros validation')
+    parser.add_argument('--split', type=int, default=1, help='The factor to split de dataset')
 
     params = vars(parser.parse_args())
 

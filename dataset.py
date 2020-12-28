@@ -5,6 +5,10 @@ from pdb import set_trace
 import tensorflow.compat.v1 as tf
 import pandas as pd
 from utils import likelihood
+from collections import Counter
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.pipeline import Pipeline
 
 class ProcessData():
 
@@ -18,62 +22,72 @@ class ProcessData():
             train_file_path = tf.keras.utils.get_file("segmentation.data.csv", TRAIN_DATA_URL)
             dataset = pd.read_csv(train_file_path).to_numpy()
             data = np.array([ i.split('\t') for i in dataset[:,0]]).astype(np.int32)
+            self.X, self.Y = self.resample(data[:,0:3:2],data[:,3])
 
-            mask_c1 = data[:,3] != 1
-            c1s = np.ma.array(data[:,3], mask= mask_c1)
-            n_c1 = c1s.sum()
+            c1s = Counter(self.Y)
+            n_c1 = c1s[1]
 
-            # PUT SEED TO FIX THE RANDOMIZATION
             c1_index = np.random.choice(range(n_c1),size=sample_len//2)
-            c2_index = np.random.choice(range(n_c1,data.shape[0]),size=sample_len//2)
+            c2_index = np.random.choice(range(n_c1,self.X.shape[0]),size=sample_len//2)
             samples_index = np.append(c1_index,c2_index)
-            self.X = data[samples_index,0:2]
-            self.Y = data[samples_index,3]
+            self.X = self.X[samples_index]
+            self.Y = self.Y[samples_index]
 
-            self.X_b = np.append(self.X[:batch//2,:],self.X[sample_len//2:(sample_len+batch)//2, :], axis=0)
-            self.Y_b = np.append(self.Y[:batch//2],self.Y[sample_len//2:(sample_len+batch)//2])
+            self.X_b = np.append(self.X[:self.batch//2,:],self.X[self.sample_len//2:(self.sample_len+self.batch)//2, :], axis=0)
+            self.Y_b = np.append(self.Y[:self.batch//2],self.Y[self.sample_len//2:(self.sample_len+self.batch)//2])
 
         elif name == 'Habermans':
             TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data'
 
             train_file_path = tf.keras.utils.get_file("haberman.data.csv", TRAIN_DATA_URL)
             self.dataset = pd.read_csv(train_file_path).to_numpy()
+            self.X, self.Y = self.resample(self.dataset[:,0:3:2],self.dataset[:,3])
 
-            mask_c1 = self.dataset[:,3] != 1
-            c1s = np.ma.array(self.dataset[:,3], mask= mask_c1)
-            n_c1 = c1s.sum()
+            classes = Counter(self.Y)
 
-            # PUT SEED TO FIX THE RANDOMIZATION
-            c1_index = np.random.choice(range(n_c1),size=50)
-            c2_index = np.random.choice(range(n_c1,self.dataset.shape[0]),size=50)
-            samples_index = np.append(c1_index,c2_index)
-
-            self.X = self.dataset[samples_index,0:3:2]
-            self.Y = self.dataset[samples_index,3]
-
+            self.sample_len = classes[1]+classes[2]
+            self.batch = self.sample_len//(sample_len//batch)
+            self.X_b = np.append(self.X[:self.batch//2,:],self.X[self.sample_len//2:(self.sample_len+self.batch)//2, :], axis=0)
+            self.Y_b = np.append(self.Y[:self.batch//2],self.Y[self.sample_len//2:(self.sample_len+self.batch)//2])
         else:
+
             iris = datasets.load_iris()
-            self.X = iris.data[:100, 1:3]  # we only take the first two features.
+            self.X = iris.data[:100, 1:3]
             self.Y = iris.target[:100]
-        #set_trace()
+
+
         self.mean = np.array([np.mean(self.X[:,i]) for i in range(self.X.shape[1])])
         self.var = np.array([np.var(self.X[:,i]) for i in range(self.X.shape[1])])
         self.center = (self.X - np.reshape(self.mean,(1,self.X.shape[1])))/np.reshape(self.var,(1,self.X.shape[1]))
+
         a = np.array([np.linalg.norm(self.center[i,:]) for i in range(self.X.shape[0])])
-        #set_trace()
+
         self.norm = np.zeros((self.X.shape[0],self.X.shape[1]))
         for i in range(self.X.shape[0]):
             self.norm[i,:] = self.center[i,:]/a[i]
+
         self.center_b = np.append(self.center[:batch//2,:],self.center[sample_len//2:(sample_len+batch)//2, :], axis=0)
         self.norm_b = np.append(self.norm[:batch//2,:],self.norm[sample_len//2:(sample_len+batch)//2, :], axis=0)
+
+    def resample(self, X, Y, over_ratio=0.9, under_ratio=1.0):
+        over = SMOTE(sampling_strategy=over_ratio)
+        under = RandomUnderSampler(sampling_strategy=under_ratio)
+        steps = [('o', over), ('u', under)]
+        pipeline = Pipeline(steps=steps)
+        X_r, y_r = pipeline.fit_resample(X, Y)
+
+        return X_r, y_r
 
     def update_batch(self, batch_index):
         self.X_b = np.append(self.X[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
                              self.X[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+
         self.Y_b = np.append(self.Y[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2],
                              self.Y[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2])
+
         self.norm_b = np.append(self.norm[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
                                 self.norm[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+
         self.center_b = np.append(self.center[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
                                 self.center[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
 
