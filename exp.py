@@ -43,13 +43,19 @@ def train(dataexp, c=1, batch=100, val=10):
     best_0 = 0
     best_1 = 0
     best_acc = 0
+
+    train_data = np.append(dataexp.norm_b[:batch_c,:],dataexp.norm_b[batch_c+val//2:batch-val//2,:], axis=0)
+    val_data = np.append(dataexp.norm_b[batch_c:batch_c+val//2,:],dataexp.norm_b[2*batch_c+val//2:batch,:], axis=0)
+    target_train = np.append(dataexp.Y_b[:batch_c],dataexp.Y_b[(batch_c+val//2):(batch-val//2)])
+    target_val = np.append(dataexp.Y_b[batch_c:batch_c+val//2],dataexp.Y_b[2*batch_c+val//2:batch])
+
     with tqdm(total=(batch_c*(batch_c-1)//2)) as t:
         for x_0_c0 in range(batch_c-1):
             for x_1_c0 in range(x_0_c0+1,batch_c):
                 inferences = np.zeros(batch-val) - 1
-                for i in range(batch-val):
+                for i in range(2*batch_c):
                     if(i != x_0_c0 and i != x_1_c0):
-                        qclass = QOCClassifier(dataexp.norm_b[x_0_c0,:], dataexp.norm_b[x_1_c0,:], dataexp.norm_b[i,:])
+                        qclass = QOCClassifier(train_data[x_0_c0,:], train_data[x_1_c0,:], train_data[i,:])
                         qclass.run_classification()
                         dic_measure = get_res(qclass.circuito)
                         if not '1' in dic_measure:
@@ -57,9 +63,9 @@ def train(dataexp, c=1, batch=100, val=10):
                         if not '0' in dic_measure:
                             dic_measure['0'] = 0
                         if dic_measure['0'] > dic_measure['1']:
-                            inferences[i] = dataexp.Y_b[x_0_c0]
+                            inferences[i] = target_train[x_0_c0]
 
-                act_acc = accuracy(inferences, dataexp.Y_b[:batch-val], dataexp.Y_b[x_0_c0])
+                act_acc = accuracy(inferences, target_train, target_train[x_0_c0])
                 if best_acc < act_acc:
                     best_acc = act_acc
                     best_0 = x_0_c0
@@ -71,7 +77,7 @@ def train(dataexp, c=1, batch=100, val=10):
     inferences = np.zeros(val) - 1
     for i in range(val):
         #set_trace()
-        qclass = QOCClassifier(dataexp.norm_b[best_0,:], dataexp.norm_b[best_1,:], dataexp.norm_b[batch - val + i,:])
+        qclass = QOCClassifier(train_data[best_0,:], train_data[best_1,:], val_data[i,:])
         qclass.run_classification()
         dic_measure = get_res(qclass.circuito)
         if not '1' in dic_measure:
@@ -79,9 +85,9 @@ def train(dataexp, c=1, batch=100, val=10):
         if not '0' in dic_measure:
             dic_measure['0'] = 0
         if dic_measure['0'] > dic_measure['1']:
-            inferences[i] = dataexp.Y_b[x_0_c0]
+            inferences[i] = target_train[best_0]
 
-    val_acc = accuracy(inferences, dataexp.Y_b[batch-val:batch], dataexp.Y_b[x_0_c0])
+    val_acc = accuracy(inferences, target_val, target_train[best_0])
 
     return val_acc, best_acc, best_0, best_1
 
