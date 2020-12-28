@@ -15,14 +15,16 @@ class ProcessData():
     def __init__(self, name='iris', sample_len=1000, batch=100):
         self.sample_len = sample_len
         self.batch = batch
+        self.split = (sample_len//batch)
         np.random.seed(132)
+
         if name == 'skin':
             TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00229/Skin_NonSkin.txt'
 
             train_file_path = tf.keras.utils.get_file("segmentation.data.csv", TRAIN_DATA_URL)
             dataset = pd.read_csv(train_file_path).to_numpy()
             data = np.array([ i.split('\t') for i in dataset[:,0]]).astype(np.int32)
-            self.X, self.Y = self.resample(data[:,0:3:2],data[:,3])
+            self.X, self.Y = self.resample(data[:,0:3:2],data[:,3], over_ratio=0.5)
 
             c1s = Counter(self.Y)
             n_c1 = c1s[1]
@@ -33,8 +35,7 @@ class ProcessData():
             self.X = self.X[samples_index]
             self.Y = self.Y[samples_index]
 
-            self.X_b = np.append(self.X[:self.batch//2,:],self.X[self.sample_len//2:(self.sample_len+self.batch)//2, :], axis=0)
-            self.Y_b = np.append(self.Y[:self.batch//2],self.Y[self.sample_len//2:(self.sample_len+self.batch)//2])
+            self.X_b , self.Y_b = self.create_batch(self.X, self.Y, self.batch, self.split)
 
         elif name == 'Habermans':
             TRAIN_DATA_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data'
@@ -46,14 +47,19 @@ class ProcessData():
             classes = Counter(self.Y)
 
             self.sample_len = classes[1]+classes[2]
-            self.batch = self.sample_len//(sample_len//batch)
-            self.X_b = np.append(self.X[:self.batch//2,:],self.X[self.sample_len//2:(self.sample_len+self.batch)//2, :], axis=0)
-            self.Y_b = np.append(self.Y[:self.batch//2],self.Y[self.sample_len//2:(self.sample_len+self.batch)//2])
+            self.batch = self.sample_len//self.split
+
+            self.X_b , self.Y_b = self.create_batch(self.X, self.Y, self.batch, self.split)
+
         else:
 
             iris = datasets.load_iris()
             self.X = iris.data[:100, 1:3]
             self.Y = iris.target[:100]
+            self.split = 1
+            self.batch = 100
+            self.sample_len = 100
+            self.X_b , self.Y_b = self.create_batch(self.X, self.Y, self.batch, self.split)
 
 
         self.mean = np.array([np.mean(self.X[:,i]) for i in range(self.X.shape[1])])
@@ -66,8 +72,8 @@ class ProcessData():
         for i in range(self.X.shape[0]):
             self.norm[i,:] = self.center[i,:]/a[i]
 
-        self.center_b = np.append(self.center[:batch//2,:],self.center[sample_len//2:(sample_len+batch)//2, :], axis=0)
-        self.norm_b = np.append(self.norm[:batch//2,:],self.norm[sample_len//2:(sample_len+batch)//2, :], axis=0)
+        self.center_b, _ = self.create_batch(self.center, self.Y, self.batch, self.split)
+        self.norm_b, _ = self.create_batch(self.norm, self.Y, self.batch, self.split)
 
     def resample(self, X, Y, over_ratio=0.9, under_ratio=1.0):
         over = SMOTE(sampling_strategy=over_ratio)
@@ -78,19 +84,29 @@ class ProcessData():
 
         return X_r, y_r
 
-    def update_batch(self, batch_index):
-        self.X_b = np.append(self.X[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
-                             self.X[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+    def create_batch(self, X, Y, b, split):
+        X_b = self.data_batch(X, 0)
+        Y_b = self.target_batch(Y, 0)
 
-        self.Y_b = np.append(self.Y[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2],
-                             self.Y[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2])
+        for i in range(1,split):
+            X_b = np.append(X_b, self.data_batch(X,i), axis=0)
+            Y_b = np.append(Y_b, self.target_batch(Y,i))
 
-        self.norm_b = np.append(self.norm[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
-                                self.norm[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+        X_b = X_b.reshape((split, b, 2))
+        Y_b = Y_b.reshape((split, b))
 
-        self.center_b = np.append(self.center[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
-                                self.center[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+        return X_b, Y_b
 
+    def data_batch(self, X, batch_index):
+        X_b = np.append(X[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2,:],
+                        X[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2, :], axis=0)
+        return X_b
+
+    def target_batch(self, Y, batch_index):
+
+        Y_b = np.append(Y[(batch_index*self.batch)//2:((batch_index+1)*self.batch)//2],
+                        Y[(self.sample_len + batch_index*self.batch)//2:(self.sample_len + (batch_index+1)*self.batch)//2])
+        return Y_b
 
     def show_data(self, x0, x1, xt, all_data=False):
 

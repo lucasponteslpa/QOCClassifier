@@ -63,3 +63,11 @@ def ctrl_bin(state, level):
             state_bin = state_bin + '0'
 
         return state_bin
+
+def split_batch(X, Y, v):
+    train_data = np.append( X[:(Y.shape[0]-v)//2,:], X[Y.shape[0]//2:Y.shape[0]-v//2,:], axis=0)
+    train_target = np.append( Y[:(Y.shape[0]-v)//2], Y[Y.shape[0]//2:Y.shape[0]-v//2])
+    val_data = np.append( X[(Y.shape[0]-v)//2:Y.shape[0]//2,:], X[Y.shape[0]-v//2:Y.shape[0],:], axis=0)
+    val_target = np.append( Y[(Y.shape[0]-v)//2 : Y.shape[0]//2] ,Y[Y.shape[0]-v//2:Y.shape[0]])
+
+    return train_data, train_target, val_data, val_target
