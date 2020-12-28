@@ -47,3 +47,7 @@ This option delimiter the number of batches, given a data set. If the `iris` is 
 
 - `(int)`: The number of samples in the validation data(`30` is the default).
 
+## Next Steps
+
+- Add cross validation.
+- IBM experiments.
