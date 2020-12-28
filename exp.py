@@ -26,10 +26,10 @@ def print_acc(data, q_acc, batch=100, val=10, split=10):
         trees_acc = classic_classifier(tree.DecisionTreeClassifier(), data, batch, val)
         knn_acc = classic_classifier(neighbors.KNeighborsClassifier(), data, batch, val)
         sgd_acc = classic_classifier(linear_model.SGDClassifier(), data, batch, val)
-        svm_mean += svm_acc/10
-        trees_mean += trees_acc/10
-        knn_mean += knn_acc/10
-        sgd_mean += sgd_acc/10
+        svm_mean += svm_acc/split
+        trees_mean += trees_acc/split
+        knn_mean += knn_acc/split
+        sgd_mean += sgd_acc/split
 
 
     print("QOCC accuracy: "+str(q_acc))
