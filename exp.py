@@ -5,7 +5,7 @@ from qiskit.visualization import plot_histogram, circuit_drawer
 from pdb import set_trace
 import numpy as np
 from tqdm import tqdm
-from utils import accuracy, get_res, print_res, split_batch
+from utils import accuracy, get_res, print_res, split_batch, load_peers
 from sklearn import svm, tree, neighbors, linear_model
 
 def classic_classifier(clf, data, batch_index, val=10):
@@ -42,31 +42,29 @@ def train(dataexp, batch_index, c=1, batch=100, val=10):
     best_acc = 0
 
     train_data, target_train, val_data, target_val = split_batch(dataexp.norm_b[batch_index,:,:], dataexp.Y_b[batch_index,:], val)
+    peers = load_peers(batch_c,30,(c-1)*batch_c)
+    with tqdm(total=peers.shape[0]-1) as t:
+        for (x_0, x_1) in zip(peers[:-1], peers[1:]):
+            inferences = np.zeros(batch-val) - 1
+            for i in range(2*batch_c):
+                qclass = QOCClassifier(train_data[x_0,:], train_data[x_1,:], train_data[i,:])
+                qclass.run_classification()
+                dic_measure = get_res(qclass.circuito)
+                if not '1' in dic_measure:
+                    dic_measure['1'] = 0
+                if not '0' in dic_measure:
+                    dic_measure['0'] = 0
+                if dic_measure['0'] > dic_measure['1']:
+                        inferences[i] = target_train[x_0]
 
-    with tqdm(total=(batch_c*(batch_c-1)//2)) as t:
-        for x_0 in range((c-1)*batch_c,((c-1)*batch_c)+batch_c-1):
-            for x_1 in range(x_0+1,((c-1)*batch_c)+batch_c):
-                inferences = np.zeros(batch-val) - 1
-                for i in range(2*batch_c):
-                    if(i != x_0 and i != x_1):
-                        qclass = QOCClassifier(train_data[x_0,:], train_data[x_1,:], train_data[i,:])
-                        qclass.run_classification()
-                        dic_measure = get_res(qclass.circuito)
-                        if not '1' in dic_measure:
-                            dic_measure['1'] = 0
-                        if not '0' in dic_measure:
-                            dic_measure['0'] = 0
-                        if dic_measure['0'] > dic_measure['1']:
-                            inferences[i] = target_train[x_0]
-
-                act_acc = accuracy(inferences, target_train, target_train[x_0])
-                if best_acc < act_acc:
-                    best_acc = act_acc
-                    best_0 = x_0
-                    best_1 = x_1
-                acc_postfix = {"best":best_acc,"act":act_acc}
-                t.set_postfix(acc_postfix)
-                t.update()
+            act_acc = accuracy(inferences, target_train, target_train[x_0])
+            if best_acc < act_acc:
+                best_acc = act_acc
+                best_0 = x_0
+                best_1 = x_1
+            acc_postfix = {"best":best_acc,"act":act_acc}
+            t.set_postfix(acc_postfix)
+            t.update()
 
     inferences = np.zeros(val) - 1
     for i in range(val_data.shape[0]):

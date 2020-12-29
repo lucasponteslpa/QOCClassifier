@@ -71,3 +71,6 @@ def split_batch(X, Y, v):
     val_target = np.append( Y[(Y.shape[0]-v)//2 : Y.shape[0]//2] ,Y[Y.shape[0]-v//2:Y.shape[0]])
 
     return train_data, train_target, val_data, val_target
+
+def load_peers(L, l, init):
+    return np.random.choice(range(init,init+L), size=l)
