@@ -1,6 +1,15 @@
 import numpy as np
 from tqdm import tqdm
 import qiskit
+from qiskit.tools.monitor import job_monitor
+
+def IBM_computer(circuit, backend, provider):
+    job = qiskit.execute(circuit, backend=backend, shots=1024, optimization_level=3)
+    job_monitor(job, interval = 2)
+    results = job.result()
+    answer = results.get_counts(circuit)
+
+    return answer
 
 def print_state(cq):
     backend = qiskit.Aer.get_backend('statevector_simulator')
