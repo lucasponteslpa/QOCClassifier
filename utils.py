@@ -64,13 +64,23 @@ def ctrl_bin(state, level):
 
         return state_bin
 
-def split_batch(X, Y, v):
-    train_data = np.append( X[:(Y.shape[0]-v)//2,:], X[Y.shape[0]//2:Y.shape[0]-v//2,:], axis=0)
-    train_target = np.append( Y[:(Y.shape[0]-v)//2], Y[Y.shape[0]//2:Y.shape[0]-v//2])
-    val_data = np.append( X[(Y.shape[0]-v)//2:Y.shape[0]//2,:], X[Y.shape[0]-v//2:Y.shape[0],:], axis=0)
-    val_target = np.append( Y[(Y.shape[0]-v)//2 : Y.shape[0]//2] ,Y[Y.shape[0]-v//2:Y.shape[0]])
+def split_batch(X, Y, val, k_index):
+    # train_data = np.append( X[:(Y.shape[0]-v)//2,:], X[Y.shape[0]//2:Y.shape[0]-v//2,:], axis=0)
+    # train_target = np.append( Y[:(Y.shape[0]-v)//2], Y[Y.shape[0]//2:Y.shape[0]-v//2])
+    # val_data = np.append( X[(Y.shape[0]-v)//2:Y.shape[0]//2,:], X[Y.shape[0]-v//2:Y.shape[0],:], axis=0)
+    # val_target = np.append( Y[(Y.shape[0]-v)//2 : Y.shape[0]//2] ,Y[Y.shape[0]-v//2:Y.shape[0]])
+    train_data = np.delete(X, range(k_index*val,(k_index+1)*val), axis=0)
+    train_target = np.delete(Y, range(k_index*val,(k_index+1)*val))
+    val_data = X[k_index*val:(k_index+1)*val,:]
+    val_target = Y[k_index*val:(k_index+1)*val]
 
     return train_data, train_target, val_data, val_target
+
+def batch_shuffle(X,Y):
+    shuf = np.array(range(Y.shape[0]))
+    np.random.shuffle(shuf)
+
+    return X[shuf], Y[shuf]
 
 def load_peers(L, l, init):
     return np.random.choice(range(init,init+L), size=l)
