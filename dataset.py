@@ -55,7 +55,7 @@ class ProcessData():
 
             iris = datasets.load_iris()
             self.X = iris.data[:100, 1:3]
-            self.Y = iris.target[:100]
+            self.Y = iris.target[:100] + 1
             self.split = 1
             self.batch = 100
             self.sample_len = 100

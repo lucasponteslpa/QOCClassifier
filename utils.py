@@ -3,8 +3,8 @@ from tqdm import tqdm
 import qiskit
 from qiskit.tools.monitor import job_monitor
 
-def IBM_computer(circuit, backend, provider):
-    job = qiskit.execute(circuit, backend=backend, shots=1024, optimization_level=3)
+def IBM_computer(circuit, backend, provider, shots=1024):
+    job = qiskit.execute(circuit, backend=backend, shots=shots, optimization_level=3)
     job_monitor(job, interval = 2)
     results = job.result()
     answer = results.get_counts(circuit)
@@ -17,15 +17,15 @@ def print_state(cq):
     result = job.result()
     print(result.get_statevector())
 
-def print_res(cq):
+def print_res(cq, shots=1024):
     backend = qiskit.Aer.get_backend('qasm_simulator')
-    results = qiskit.execute(cq, backend=backend, shots=1024).result()
+    results = qiskit.execute(cq, backend=backend, shots=shots).result()
     answer = results.get_counts()
     print(answer)
 
-def get_res(cq):
+def get_res(cq, shots=1024):
     backend = qiskit.Aer.get_backend('qasm_simulator')
-    results = qiskit.execute(cq, backend=backend, shots=1024).result()
+    results = qiskit.execute(cq, backend=backend, shots=shots).result()
     answer = results.get_counts()
 
     return answer
@@ -74,10 +74,6 @@ def ctrl_bin(state, level):
         return state_bin
 
 def split_batch(X, Y, val, k_index):
-    # train_data = np.append( X[:(Y.shape[0]-v)//2,:], X[Y.shape[0]//2:Y.shape[0]-v//2,:], axis=0)
-    # train_target = np.append( Y[:(Y.shape[0]-v)//2], Y[Y.shape[0]//2:Y.shape[0]-v//2])
-    # val_data = np.append( X[(Y.shape[0]-v)//2:Y.shape[0]//2,:], X[Y.shape[0]-v//2:Y.shape[0],:], axis=0)
-    # val_target = np.append( Y[(Y.shape[0]-v)//2 : Y.shape[0]//2] ,Y[Y.shape[0]-v//2:Y.shape[0]])
     train_data = np.delete(X, range(k_index*val,(k_index+1)*val), axis=0)
     train_target = np.delete(Y, range(k_index*val,(k_index+1)*val))
     val_data = X[k_index*val:(k_index+1)*val,:]
@@ -91,5 +87,28 @@ def batch_shuffle(X,Y):
 
     return X[shuf], Y[shuf]
 
-def load_peers(L, l, init):
-    return np.random.choice(range(init,init+L), size=l)
+def load_peers(l, pos, n=2):
+    p = []
+    for _ in range(n):
+        p = np.append(p,np.random.choice(pos, size= l if pos.shape[0]>l else pos.shape[0] ))
+    return p
+
+def inference(dic_measure, target=1, name='QOCC'):
+    if name=='QOCC':
+        if not '1' in dic_measure:
+            dic_measure['1'] = 0
+        if not '0' in dic_measure:
+            dic_measure['0'] = 0
+        if dic_measure['0'] > dic_measure['1']:
+            return target
+        else:
+            return -1
+    else:
+        if not '0 0' in dic_measure:
+            dic_measure['0 0'] = 0
+        if not '0 1' in dic_measure:
+            dic_measure['0 1'] = 0
+        if dic_measure['0 0'] > dic_measure['0 1']:
+                return 1
+        elif dic_measure['0 0'] <= dic_measure['0 1']:
+            return 2
