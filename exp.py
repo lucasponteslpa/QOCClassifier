@@ -48,7 +48,7 @@ def train(dataexp, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30
     # backend = provider.get_backend('ibmq_ourense')
     qiskit.IBMQ.load_account()
     provider = qiskit.IBMQ.get_provider(hub='ibm-q-research',group='Adenilton-Silva')
-    # backend = provider.get_backend('ibmq_ourense')
+    #backend = provider.get_backend('ibmq_casablanca')
     # provider = qiskit.IBMQ.load_account()
     backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 3 and not x.configuration().simulator and x.status().operational==True))
 
@@ -69,9 +69,12 @@ def train(dataexp, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30
             peers = load_peers(n_pairs,np.where(target_train==c)[0])
             peers = peers[:n_samples*(len(peers)//n_samples)].reshape(len(peers)//n_samples,n_samples)
         else:
-            peers_c1 = load_peers(n_pairs//n_samples,np.where(target_train==1)[0])
-            peers_c2 = load_peers(peers_c1.shape[0],np.where(target_train==2)[0])
-            peers = list(zip(peers_c1, peers_c2))
+            peers_c1 = load_peers(n_pairs,np.where(target_train==1)[0],n=1)
+            peers_c2 = load_peers(peers_c1.shape[0],np.where(target_train==2)[0],n=1)
+            peers = np.zeros(2*len(peers_c2))
+            peers[::2] = peers_c1[:len(peers_c2)]
+            peers[1::2] = peers_c2
+            peers = peers.reshape(len(peers)//n_samples,n_samples).astype(int)
 
 
         with tqdm(total=len(peers)) as t:
@@ -101,6 +104,7 @@ def train(dataexp, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30
         train_vec = train_data[np.array(best_index)]
         target_vec = target_train[np.array(best_index)] - 1
         for i in range(val_data.shape[0]):
+            backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 3 and not x.configuration().simulator and x.status().operational==True))
             qclass = QClassifier(train_vec, target_vec, val_data[i,:], name=name)
 
             qclass.preparation()
@@ -131,8 +135,10 @@ def run_classifier(params):
             for i in range(dataexp.split):
                 print('Training C1')
                 val_acc_c1, val_ibm_c1, best_acc_c1 = train(dataexp, i, c=1, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
+                #val_acc_c1, val_ibm_c1, best_acc_c1 = 0,0,0
                 print('Training C2')
                 val_acc_c2, val_ibm_c2, best_acc_c2 = train(dataexp, i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
+                #val_acc_c2, val_ibm_c2, best_acc_c2 = 0,0,0
                 print('Training DBQC')
                 val_acc_dbqc, val_ibm_dbqc, best_acc_dbqc = train(dataexp, i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'],val=params['val'], name='DBQC')
                 val_acc_mean_c1 = np.append(val_acc_mean_c1, val_acc_c1)

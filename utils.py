@@ -91,7 +91,7 @@ def load_peers(l, pos, n=2):
     p = []
     for _ in range(n):
         p = np.append(p,np.random.choice(pos, size= l if pos.shape[0]>l else pos.shape[0] ))
-    return p
+    return p.astype(int)
 
 def inference(dic_measure, target=1, name='QOCC'):
     if name=='QOCC':
