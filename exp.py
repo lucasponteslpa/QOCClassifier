@@ -1,13 +1,13 @@
 import qiskit
 from dataset import ProcessData
-from qclassifiers import DBQClassifier, QOCClassifier, QClassifier
-from qiskit.visualization import plot_histogram, circuit_drawer
+from qclassifiers import QClassifier
+from qiskit.visualization import circuit_drawer
 from qiskit import IBMQ
 from qiskit.providers.ibmq import least_busy
 from pdb import set_trace
 import numpy as np
 from tqdm import tqdm
-from utils import accuracy, get_res, print_res, split_batch, load_peers, batch_shuffle, IBM_computer, inference
+from utils import accuracy, get_res, print_res, split_batch, load_peers, batch_shuffle, IBM_computer, inference_array
 from sklearn import svm, tree, neighbors, linear_model
 
 def classic_classifier(clf, data, batch_index, val=10):
@@ -41,16 +41,16 @@ def print_acc(data, res_file, val=10, split=10):
     res_file.write("KNN accuracy: "+str(np.mean(knn_mean))+'\n')
     res_file.write("SGD accuracy: "+str(np.mean(sgd_mean))+'\n')
 
-def train(dataexp, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30, name='QOCC', shots=1024):
+def train(dataexp, provider_param, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30, name='QOCC', shots=1024):
 
     # qiskit.IBMQ.load_account()
     # provider = qiskit.IBMQ.get_provider(hub='ibm-q')
     # backend = provider.get_backend('ibmq_ourense')
     qiskit.IBMQ.load_account()
     provider = qiskit.IBMQ.get_provider(hub='ibm-q-research',group='Adenilton-Silva')
-    #backend = provider.get_backend('ibmq_casablanca')
+    backend = provider.get_backend(provider_param)
     # provider = qiskit.IBMQ.load_account()
-    backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 3 and not x.configuration().simulator and x.status().operational==True))
+    # backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 3 and not x.configuration().simulator and x.status().operational==True))
 
     kfold = batch//val
     batch_c = (batch-val)//2
@@ -80,16 +80,18 @@ def train(dataexp, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30
         with tqdm(total=len(peers)) as t:
             for index in peers:
                 inferences = np.zeros(batch-val) - 1
+                qclass_arr = []
                 for i in range(2*batch_c):
 
                     train_vec = train_data[np.array(index)]
                     target_vec = target_train[np.array(index)] - 1
                     qclass = QClassifier(train_vec, target_vec, train_data[i,:], name=name)
                     qclass.preparation()
+                    qclass_arr.append(qclass.circuito)
 
-                    dic_measure = get_res(qclass.circuito, shots=shots)
-                    inferences[i] = inference(dic_measure,c,name=name)
-
+                dic_measure = get_res(qclass_arr, shots=shots)
+                inferences = inference_array(dic_measure,c,name=name)
+                #set_trace()
                 act_acc = accuracy(inferences, target_train, c)
 
                 if best_acc[k] < act_acc:
@@ -99,19 +101,22 @@ def train(dataexp, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30
                 t.set_postfix(acc_postfix)
                 t.update()
 
-        inferences = np.zeros(val) - 1
-        inferences_ibm = np.zeros(val) - 1
+        #inferences = np.zeros(val) - 1
+        #inferences_ibm = np.zeros(val) - 1
         train_vec = train_data[np.array(best_index)]
         target_vec = target_train[np.array(best_index)] - 1
+        qclass_arr = []
         for i in range(val_data.shape[0]):
-            backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 3 and not x.configuration().simulator and x.status().operational==True))
+            #backend = least_busy(provider.backends(filters=lambda x: x.configuration().n_qubits >= 3 and not x.configuration().simulator and x.status().operational==True))
             qclass = QClassifier(train_vec, target_vec, val_data[i,:], name=name)
 
             qclass.preparation()
-            dic_measure = get_res(qclass.circuito)
-            inferences[i] = inference(dic_measure, c, name=name)
-            dic_measure_ibm = IBM_computer(qclass.circuito, backend, provider)
-            inferences_ibm[i] = inference(dic_measure_ibm, c, name=name)
+            qclass_arr.append(qclass.circuito)
+
+        dic_measure = get_res(qclass_arr)
+        inferences = inference_array(dic_measure, c, name=name)
+        dic_measure_ibm = IBM_computer(qclass_arr, backend, provider)
+        inferences_ibm = inference_array(dic_measure_ibm, c, name=name)
 
         val_acc[k] = accuracy(inferences, target_val, c)
         val_acc_ibm[k] = accuracy(inferences_ibm, target_val, c)
@@ -134,13 +139,13 @@ def run_classifier(params):
             val_acc_mean_dbqc, val_ibm_mean_dbqc = [], []
             for i in range(dataexp.split):
                 print('Training C1')
-                val_acc_c1, val_ibm_c1, best_acc_c1 = train(dataexp, i, c=1, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
+                val_acc_c1, val_ibm_c1, best_acc_c1 = train(dataexp, params['provider'], i, c=1, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
                 #val_acc_c1, val_ibm_c1, best_acc_c1 = 0,0,0
                 print('Training C2')
-                val_acc_c2, val_ibm_c2, best_acc_c2 = train(dataexp, i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
+                val_acc_c2, val_ibm_c2, best_acc_c2 = train(dataexp, params['provider'], i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
                 #val_acc_c2, val_ibm_c2, best_acc_c2 = 0,0,0
                 print('Training DBQC')
-                val_acc_dbqc, val_ibm_dbqc, best_acc_dbqc = train(dataexp, i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'],val=params['val'], name='DBQC')
+                val_acc_dbqc, val_ibm_dbqc, best_acc_dbqc = train(dataexp, params['provider'], i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'],val=params['val'], name='DBQC')
                 val_acc_mean_c1 = np.append(val_acc_mean_c1, val_acc_c1)
                 val_acc_mean_c2 = np.append(val_acc_mean_c2, val_acc_c2)
                 val_acc_mean_dbqc = np.append(val_acc_mean_dbqc, val_acc_dbqc)
@@ -206,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_samples', type=int, default=2, help='Number os training samples to run in the circuit')
     parser.add_argument('--num_pairs', type=int, default=30, help='Number of pairs of samples')
     parser.add_argument('--out_file', type=str, default='results.txt', help='Define what circuit will be used')
-
+    parser.add_argument('--provider', type=str, default='ibmq_athens', help='Define what circuit will be used')
 
     params = vars(parser.parse_args())
 

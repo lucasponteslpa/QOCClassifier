@@ -2,14 +2,25 @@ import numpy as np
 from tqdm import tqdm
 import qiskit
 from qiskit.tools.monitor import job_monitor
+from qiskit.compiler import assemble, transpile
 
 def IBM_computer(circuit, backend, provider, shots=1024):
-    job = qiskit.execute(circuit, backend=backend, shots=shots, optimization_level=3)
-    job_monitor(job, interval = 2)
-    results = job.result()
-    answer = results.get_counts(circuit)
+    # job = qiskit.execute(circuit, backend=backend, shots=shots, optimization_level=3)
+    # job_monitor(job, interval = 2)
+    # results = job.result()
+    # answer = results.get_counts(circuit)
+    transpiled_circs = transpile(circuit, backend=backend, optimization_level=3)
+    qobjs = assemble(transpiled_circs, backend=backend)
+    job_info = backend.run(qobjs)
 
-    return answer
+    results = []
+
+    # get the results and append to the 'results' list
+    for qcirc_result in transpiled_circs:
+        results.append(job_info.result().get_counts(qcirc_result))
+
+
+    return results
 
 def print_state(cq):
     backend = qiskit.Aer.get_backend('statevector_simulator')
@@ -25,10 +36,19 @@ def print_res(cq, shots=1024):
 
 def get_res(cq, shots=1024):
     backend = qiskit.Aer.get_backend('qasm_simulator')
-    results = qiskit.execute(cq, backend=backend, shots=shots).result()
-    answer = results.get_counts()
+    # results = qiskit.execute(cq, backend=backend, shots=shots).result()
+    # answer = results.get_counts()
+    transpiled_circs = transpile(cq, backend=backend, optimization_level=3)
+    qobjs = assemble(transpiled_circs, backend=backend,shots=shots)
+    job_info = backend.run(qobjs)
 
-    return answer
+    results = [job_info.result().get_counts(qcirc_result) for qcirc_result in transpiled_circs ]
+
+    # get the results and append to the 'results' list
+    # for qcirc_result in transpiled_circs:
+    #     results.append(job_info.result().get_counts(qcirc_result))
+
+    return results
 
 def likelihood( mu, var, samples):
     lklh = (1/np.sqrt(2*np.pi*var))*np.exp((np.power(samples - mu,2))/var)
@@ -112,3 +132,7 @@ def inference(dic_measure, target=1, name='QOCC'):
                 return 1
         elif dic_measure['0 0'] <= dic_measure['0 1']:
             return 2
+
+def inference_array(dic_measure, target=1, name='QOCC'):
+    inf = [inference(dic,target,name) for dic in dic_measure]
+    return np.array(inf)
