@@ -107,7 +107,7 @@ def batch_shuffle(X,Y):
 
     return X[shuf], Y[shuf]
 
-def load_peers(l, pos, n=2):
+def load_pairs(l, pos, n=2):
     p = []
     for _ in range(n):
         p = np.append(p,np.random.choice(pos, size= l if pos.shape[0]>l else pos.shape[0] ))
@@ -136,3 +136,22 @@ def inference(dic_measure, target=1, name='QOCC'):
 def inference_array(dic_measure, target=1, name='QOCC'):
     inf = [inference(dic,target,name) for dic in dic_measure]
     return np.array(inf)
+
+def check_post(dic):
+    if not '0 0' in dic:
+            dic['0 0'] = 0
+    if not '0 1' in dic:
+        dic['0 1'] = 0
+    if not '1 0' in dic:
+            dic['0 0'] = 0
+    if not '1 1' in dic:
+        dic['1 1'] = 0
+
+    if (dic['1 0'] + dic['1 1']) > (dic['0 0'] + dic['0 1']):
+        return 1
+    else:
+        return 0
+
+def post_selec_sucess(dic_measure):
+    post_sucess = np.array([check_post(dic) for dic in dic_measure])
+    return post_sucess.sum()

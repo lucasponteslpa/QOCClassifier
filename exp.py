@@ -7,7 +7,7 @@ from qiskit.providers.ibmq import least_busy
 from pdb import set_trace
 import numpy as np
 from tqdm import tqdm
-from utils import accuracy, get_res, print_res, split_batch, load_peers, batch_shuffle, IBM_computer, inference_array
+from utils import accuracy, get_res, print_res, split_batch, load_pairs, batch_shuffle, IBM_computer, inference_array, post_selec_sucess
 from sklearn import svm, tree, neighbors, linear_model
 
 def classic_classifier(clf, data, batch_index, val=10):
@@ -41,7 +41,7 @@ def print_acc(data, res_file, val=10, split=10):
     res_file.write("KNN accuracy: "+str(np.mean(knn_mean))+'\n')
     res_file.write("SGD accuracy: "+str(np.mean(sgd_mean))+'\n')
 
-def train(dataexp, provider_param, batch_index, c=1, batch=100, val=10, n_samples=2 , n_pairs=30, name='QOCC', shots=1024):
+def train(data_shuffled, target_shuffled, provider_param, res_file, c=1, batch=100, val=10, n_samples=2 , n_pairs=30, name='QOCC'):
 
     # qiskit.IBMQ.load_account()
     # provider = qiskit.IBMQ.get_provider(hub='ibm-q')
@@ -58,27 +58,28 @@ def train(dataexp, provider_param, batch_index, c=1, batch=100, val=10, n_sample
     best_acc = np.zeros(kfold)
     val_acc = np.zeros(kfold)
     val_acc_ibm = np.zeros(kfold)
+    var_acc_ibm = np.zeros(kfold)
 
-    data_shuffled, target_shuffled = batch_shuffle(dataexp.norm_b[batch_index,:,:], dataexp.Y_b[batch_index,:])
+    #data_shuffled, target_shuffled = batch_shuffle(dataexp.norm_b[batch_index,:,:], dataexp.Y_b[batch_index,:])
 
     # ISSUE: THE SAMPLES OF TRAIN PROBABLY CONTAIN MEMBER OF ANOTHER CLASSE
     for k in range(kfold):
         train_data, target_train, val_data, target_val = split_batch(data_shuffled, target_shuffled, val, k)
         #set_trace()
         if name=='QOCC':
-            peers = load_peers(n_pairs,np.where(target_train==c)[0])
-            peers = peers[:n_samples*(len(peers)//n_samples)].reshape(len(peers)//n_samples,n_samples)
+            pairs = load_pairs(n_pairs,np.where(target_train==c)[0])
+            pairs = pairs[:n_samples*(len(pairs)//n_samples)].reshape(len(pairs)//n_samples,n_samples)
         else:
-            peers_c1 = load_peers(n_pairs,np.where(target_train==1)[0],n=1)
-            peers_c2 = load_peers(peers_c1.shape[0],np.where(target_train==2)[0],n=1)
-            peers = np.zeros(2*len(peers_c2))
-            peers[::2] = peers_c1[:len(peers_c2)]
-            peers[1::2] = peers_c2
-            peers = peers.reshape(len(peers)//n_samples,n_samples).astype(int)
+            pairs_c1 = load_pairs(n_pairs,np.where(target_train==1)[0],n=1)
+            pairs_c2 = load_pairs(pairs_c1.shape[0],np.where(target_train==2)[0],n=1)
+            pairs = np.zeros(2*len(pairs_c2))
+            pairs[::2] = pairs_c1[:len(pairs_c2)]
+            pairs[1::2] = pairs_c2
+            pairs = pairs.reshape(len(pairs)//n_samples,n_samples).astype(int)
 
 
-        with tqdm(total=len(peers)) as t:
-            for index in peers:
+        with tqdm(total=len(pairs)) as t:
+            for index in pairs:
                 inferences = np.zeros(batch-val) - 1
                 qclass_arr = []
                 for i in range(2*batch_c):
@@ -89,7 +90,7 @@ def train(dataexp, provider_param, batch_index, c=1, batch=100, val=10, n_sample
                     qclass.preparation()
                     qclass_arr.append(qclass.circuito)
 
-                dic_measure = get_res(qclass_arr, shots=shots)
+                dic_measure = get_res(qclass_arr, shots=1024)
                 inferences = inference_array(dic_measure,c,name=name)
                 #set_trace()
                 act_acc = accuracy(inferences, target_train, c)
@@ -115,14 +116,32 @@ def train(dataexp, provider_param, batch_index, c=1, batch=100, val=10, n_sample
 
         dic_measure = get_res(qclass_arr)
         inferences = inference_array(dic_measure, c, name=name)
-        dic_measure_ibm = IBM_computer(qclass_arr, backend, provider)
-        inferences_ibm = inference_array(dic_measure_ibm, c, name=name)
-
         val_acc[k] = accuracy(inferences, target_val, c)
-        val_acc_ibm[k] = accuracy(inferences_ibm, target_val, c)
+        aux_measure = []
+        for _ in range(5):
+            dic_measure_ibm = IBM_computer(qclass_arr, backend, provider)
+            inferences_ibm = inference_array(dic_measure_ibm, c, name=name)
+
+            aux_measure.append(accuracy(inferences_ibm, target_val, c))
+        val_acc_ibm[k] = np.mean(aux_measure)
+        var_acc_ibm[k] = np.var(aux_measure)
         #val_acc_ibm[k] = 0
-        print('IBM Accuracy:'+str(val_acc_ibm[k]))
-    return val_acc, val_acc_ibm, best_acc
+        if name == 'QOCC':
+            res_file.write('C'+str(c)+' Fold-'+str(k)+' Accuracy: '+str(val_acc[k])+'\n')
+            res_file.write('C'+str(c)+' IBM Fold-'+str(k)+' Accuracy: '+str(val_acc_ibm[k])+'\n')
+            res_file.write('\n')
+            print('IBM Accuracy: '+str(val_acc_ibm[k]))
+            print('Simulation Accuracy: '+str(val_acc[k]))
+
+        else:
+            res_file.write('DBQC'+' Fold-'+str(k)+' Accuracy: '+str(val_acc[k])+'\n')
+            res_file.write('DBQC'+' IBM Fold-'+str(k)+' Accuracy: '+str(val_acc_ibm[k])+'\n')
+            res_file.write('Post Selection Not Suceeds: '+str(post_selec_sucess(dic_measure_ibm)))
+            res_file.write('\n')
+            print('IBM Accuracy: '+str(val_acc_ibm[k]))
+            print('Simulation Accuracy: '+str(val_acc[k]))
+
+    return val_acc, val_acc_ibm, var_acc_ibm, best_acc
 
 def run_classifier(params):
     res_file = open(params['out_file'],'w')
@@ -138,14 +157,15 @@ def run_classifier(params):
             val_acc_mean_c2, val_ibm_mean_c2 = [], []
             val_acc_mean_dbqc, val_ibm_mean_dbqc = [], []
             for i in range(dataexp.split):
+                data_shuffled, target_shuffled = batch_shuffle(dataexp.norm_b[i,:,:], dataexp.Y_b[i,:])
                 print('Training C1')
-                val_acc_c1, val_ibm_c1, best_acc_c1 = train(dataexp, params['provider'], i, c=1, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
+                val_acc_c1, val_ibm_c1, var_ibm_c1, best_acc_c1 = train(data_shuffled, target_shuffled, params['provider'], res_file, c=1, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
                 #val_acc_c1, val_ibm_c1, best_acc_c1 = 0,0,0
                 print('Training C2')
-                val_acc_c2, val_ibm_c2, best_acc_c2 = train(dataexp, params['provider'], i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
+                val_acc_c2, val_ibm_c2, var_ibm_c2, best_acc_c2 = train(data_shuffled, target_shuffled, params['provider'], res_file, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'], val=params['val'])
                 #val_acc_c2, val_ibm_c2, best_acc_c2 = 0,0,0
                 print('Training DBQC')
-                val_acc_dbqc, val_ibm_dbqc, best_acc_dbqc = train(dataexp, params['provider'], i, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'],val=params['val'], name='DBQC')
+                val_acc_dbqc, val_ibm_dbqc, var_ibm_dbqc, best_acc_dbqc = train(data_shuffled, target_shuffled, params['provider'], res_file, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'],val=params['val'], name='DBQC')
                 val_acc_mean_c1 = np.append(val_acc_mean_c1, val_acc_c1)
                 val_acc_mean_c2 = np.append(val_acc_mean_c2, val_acc_c2)
                 val_acc_mean_dbqc = np.append(val_acc_mean_dbqc, val_acc_dbqc)
@@ -156,12 +176,15 @@ def run_classifier(params):
                 res_file.write("Class 1 Best Accuracy: "+str(np.mean(best_acc_c1))+'\n')
                 res_file.write("Class 1 Validation Accuracy: "+str(np.mean(val_acc_c1))+'\n')
                 res_file.write("Class 1 IBM Accuracy: "+str(np.mean(val_ibm_c1))+'\n')
+                res_file.write("Class 1 IBM Mean Variance: "+str(np.mean(var_ibm_c1))+'\n')
                 res_file.write("Class 2 Best Accuracy: "+str(np.mean(best_acc_c2))+'\n')
                 res_file.write("Class 2 Validation Accuracy: "+str(np.mean(val_acc_c2))+'\n')
                 res_file.write("Class 2 IBM Accuracy: "+str(np.mean(val_ibm_c2))+'\n')
+                res_file.write("Class 1 IBM Mean Variance: "+str(np.mean(var_ibm_c2))+'\n')
                 res_file.write("DBQC Best Accuracy: "+str(np.mean(best_acc_dbqc))+'\n')
                 res_file.write("DBQC Validation Accuracy: "+str(np.mean(val_acc_dbqc))+'\n')
                 res_file.write("DBQC IBM Accuracy: "+str(np.mean(val_ibm_dbqc))+'\n')
+                res_file.write("Class 1 IBM Mean Variance: "+str(np.mean(var_ibm_dbqc))+'\n')
                 res_file.write('\n')
 
             res_file.write("QOCC C1 accuracy: "+str(np.mean(val_acc_mean_c1))+'\n')
