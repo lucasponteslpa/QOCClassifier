@@ -126,11 +126,17 @@ def inference(dic_measure, target=1, name='QOCC'):
     else:
         if not '0 0' in dic_measure:
             dic_measure['0 0'] = 0
-        if not '0 1' in dic_measure:
-            dic_measure['0 1'] = 0
-        if dic_measure['0 0'] > dic_measure['0 1']:
+        # if not '0 1' in dic_measure:
+        #     dic_measure['0 1'] = 0
+        # if dic_measure['0 0'] > dic_measure['0 1']:
+        #         return 1
+        # elif dic_measure['0 0'] <= dic_measure['0 1']:
+        #     return 2
+        if not '1 0' in dic_measure:
+            dic_measure['1 0'] = 0
+        if dic_measure['0 0'] > dic_measure['1 0']:
                 return 1
-        elif dic_measure['0 0'] <= dic_measure['0 1']:
+        elif dic_measure['0 0'] <= dic_measure['1 0']:
             return 2
 
 def inference_array(dic_measure, target=1, name='QOCC'):
@@ -147,7 +153,8 @@ def check_post(dic):
     if not '1 1' in dic:
         dic['1 1'] = 0
 
-    if (dic['1 0'] + dic['1 1']) > (dic['0 0'] + dic['0 1']):
+    # if (dic['1 0'] + dic['1 1']) > (dic['0 0'] + dic['0 1']):
+    if (dic['0 1'] + dic['1 1']) < (dic['0 0'] + dic['1 0']):
         return 1
     else:
         return 0
