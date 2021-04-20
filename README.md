@@ -15,11 +15,6 @@
 
     python3 exp.py [-h] [--dataset DATASET] [--batch BATCH] [--val VAL] [--split SPLIT]
 
-### Circuit Options
-
-- `QOCC`: implemented(default).
-- `DBQC`: not implemented completly.
-
 ### Dataset Options
 
 - `iris`: [Iris Data Set.](https://archive.ics.uci.edu/ml/datasets/iris)(default)

@@ -182,7 +182,6 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='QOCC Experiments')
-    parser.add_argument('--circuit', type=str, default='QOCC', help='Define what circuit will be used')
     parser.add_argument('--dataset', type=str, default='iris', help='Choose what dataset will be used')
     parser.add_argument('--batch', type=int, default=100, help='The size of batch')
     parser.add_argument('--val', type=int, default=30, help='The size of validation dataset')
