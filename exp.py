@@ -148,6 +148,7 @@ def run_classifier(params):
 
         print('Training HC')
         val_acc_dbqc, val_ibm_dbqc, var_ibm_dbqc, best_acc_dbqc = train(data_shuffled, target_shuffled, params['provider'], res_file, c=2, batch=dataexp.batch, n_samples=params['num_samples'],n_pairs=params['num_pairs'],val=params['val'], name='HC')
+
         val_acc_mean_c1 = np.append(val_acc_mean_c1, val_acc_c1)
         val_acc_mean_c2 = np.append(val_acc_mean_c2, val_acc_c2)
         val_acc_mean_dbqc = np.append(val_acc_mean_dbqc, val_acc_dbqc)
@@ -184,12 +185,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='QOCC Experiments')
     parser.add_argument('--dataset', type=str, default='iris', help='Choose what dataset will be used')
     parser.add_argument('--batch', type=int, default=100, help='The size of batch')
-    parser.add_argument('--val', type=int, default=30, help='The size of validation dataset')
-    parser.add_argument('--split', type=int, default=1, help='The factor to split de dataset')
-    parser.add_argument('--num_samples', type=int, default=2, help='Number os training samples to run in the circuit')
-    parser.add_argument('--num_pairs', type=int, default=30, help='Number of pairs of samples')
-    parser.add_argument('--out_file', type=str, default='results.txt', help='Define what circuit will be used')
-    parser.add_argument('--provider', type=str, default='ibmq_athens', help='Define what circuit will be used')
+    parser.add_argument('--val', type=int, default=30, help='The size of validation dataset.')
+    parser.add_argument('--split', type=int, default=1, help='The factor to split de dataset.')
+    parser.add_argument('--num_samples', type=int, default=2, help='Number os training samples to encode in the circuit.')
+    parser.add_argument('--num_pairs', type=int, default=30, help='Number of pairs of samples.')
+    parser.add_argument('--out_file', type=str, default='results.txt', help='Name of the file with the output result.')
+    parser.add_argument('--provider', type=str, default='ibmq_athens', help='Provider in IBMQ Experience.')
 
     params = vars(parser.parse_args())
 

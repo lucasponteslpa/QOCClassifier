@@ -13,7 +13,7 @@
 
 ## Run the experiments
 
-    python3 exp.py [-h] [--dataset DATASET] [--batch BATCH] [--val VAL] [--split SPLIT]
+    python3 exp.py [-h] [--dataset DATASET] [--batch (int)] [--val (int)] [--split (int)] [--num_samples (int)] [--num_pairs (int)] [--out_file (string)] [--provider (string)]
 
 ### Dataset Options
 
@@ -34,3 +34,19 @@ This option delimiter the number of batches, given a data set. If the `iris` is 
 ### Validation Option
 
 - `(int)`: The number of samples in the validation data(`30` is the default).
+
+### Number of Samples Option
+
+- `(int)`: Number os training samples to encode in the circuit(`2` is the default).
+
+### Number of Pairs Option
+
+- `(int)`: Number of pairs of samples(`30` is the default).
+
+### Output File Option
+
+- `(string)`: Name of the file with the output result(`results.txt` is the default).
+
+### Provider Option
+
+- `(string)`: Provider in IBMQ Experience(`ibmq_athens` is the default).
