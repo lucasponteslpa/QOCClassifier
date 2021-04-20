@@ -1,7 +1,11 @@
 # Quantum One-class Classification With a Distance-based Classifier
 [**[Paper]**](https://arxiv.org/abs/2007.16200)
 
-**Abstract:** *Distance-based Quantum Classifier (DBQC) is a quantum machine learning model for pattern recognition. However, DBQC has a low accuracy on real noisy quantum processors. We present a modification of DBQC named Quantum One-class Classifier (QOCC) to improve accuracy on NISQ (Noisy Intermediate-Scale Quantum) computers. Experimental results were obtained by running the proposed classifier on a computer provided by IBM Quantum Experience and show that QOCC has improved accuracy over DBQC.*
+**Abstract:** *The advancement of technology in Quantum Computing has brought possibilities for the execution of algorithms in real quantum devices. As a result, Quantum Machine Learning has grown due to the prospect of solving machine learning problems in quantum machines. However, the existing errors in the current quantum hardware and the low number of available qubits makes it necessary to use solutions that use fewer qubits and fewer operations, mitigating such obstacles. Hadamard Classifier (HC) is a simple distance-based quantum machine learning model for pattern recognition that aims to be minimal. However, HC can still be improved. We present a new classifier based on HC named Quantum One-class Classifier (QOCC) that consists of a minimal quantum machine learning model with fewer operations and qubits, thus being able to mitigate errors from NISQ (Noisy Intermediate-Scale Quantum) computers. Experimental results were obtained by running the proposed classifier on a quantum device provided by IBM Quantum Experience and show that QOCC has advantages over HC.*
+
+## Replicate the experiments of the paper
+
+    ./run.sh
 
 ## Python Dependencies
 
@@ -9,7 +13,7 @@
 
 ## Run the experiments
 
-    python3 exp.py [-h] [--circuit CIRCUIT] [--dataset DATASET] [--show_data SHOW_DATA] [--train TRAIN] [--batch BATCH] [--val VAL] [--split SPLIT]
+    python3 exp.py [-h] [--dataset DATASET] [--batch BATCH] [--val VAL] [--split SPLIT]
 
 ### Circuit Options
 
@@ -21,17 +25,6 @@
 - `iris`: [Iris Data Set.](https://archive.ics.uci.edu/ml/datasets/iris)(default)
 - `skin`: [Skin Segmentation Data Set](https://archive.ics.uci.edu/ml/datasets/Skin+Segmentation)
 - `Habermans`: [Haberman's Survival Data Set](https://archive.ics.uci.edu/ml/datasets/Haberman%27s+Survival)
-
-### Show Data Option
-
-- `True`: Plot the normalized data distributions of choosed data set.
-- `False`: Don't plot the data(default).
-
-### Train Option
-The training run over each batch and is computed the mean accuracy over these batches.
-
-- `True`: Run the simulation of the circuit to search for the training sample with higher accuracy (default).
-- `False`: Execute a test with a given sample(not implemented).
 
 ### Batch Option
 Depending of the choosed dataset this parameter is fixed. If is greater than `400` for `Habermans` data set option, ocur an error, because the batch is greater than the data set resampled. For `iris` the batch is fixed to `100`. The default parameters of the batch and the split(next option) is based on the `skin` data set.

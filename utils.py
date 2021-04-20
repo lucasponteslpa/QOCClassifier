@@ -5,17 +5,12 @@ from qiskit.tools.monitor import job_monitor
 from qiskit.compiler import assemble, transpile
 
 def IBM_computer(circuit, backend, provider, shots=1024):
-    # job = qiskit.execute(circuit, backend=backend, shots=shots, optimization_level=3)
-    # job_monitor(job, interval = 2)
-    # results = job.result()
-    # answer = results.get_counts(circuit)
     transpiled_circs = transpile(circuit, backend=backend, optimization_level=3)
     qobjs = assemble(transpiled_circs, backend=backend)
     job_info = backend.run(qobjs)
 
     results = []
 
-    # get the results and append to the 'results' list
     for qcirc_result in transpiled_circs:
         results.append(job_info.result().get_counts(qcirc_result))
 
@@ -36,17 +31,11 @@ def print_res(cq, shots=1024):
 
 def get_res(cq, shots=1024):
     backend = qiskit.Aer.get_backend('qasm_simulator')
-    # results = qiskit.execute(cq, backend=backend, shots=shots).result()
-    # answer = results.get_counts()
     transpiled_circs = transpile(cq, backend=backend, optimization_level=3)
     qobjs = assemble(transpiled_circs, backend=backend,shots=shots)
     job_info = backend.run(qobjs)
 
     results = [job_info.result().get_counts(qcirc_result) for qcirc_result in transpiled_circs ]
-
-    # get the results and append to the 'results' list
-    # for qcirc_result in transpiled_circs:
-    #     results.append(job_info.result().get_counts(qcirc_result))
 
     return results
 
@@ -55,8 +44,6 @@ def likelihood( mu, var, samples):
     return np.prod(lklh)
 
 def accuracy(inferences, labels, target=None):
-    #import pdb
-    #pdb.set_trace()
     if target != None:
         mask_t = labels != target
         mask_dif = inferences != target
@@ -82,7 +69,6 @@ def ctrl_bin(state, level):
                 state_bin = state_bin + str(i%2) + str(i//2)
                 i = i//2
 
-        #if level > len(state_bin):
         i = level - len(state_bin) - 1
 
         if state//2 == 0 and level > len(state_bin):
@@ -126,12 +112,6 @@ def inference(dic_measure, target=1, name='QOCC'):
     else:
         if not '0 0' in dic_measure:
             dic_measure['0 0'] = 0
-        # if not '0 1' in dic_measure:
-        #     dic_measure['0 1'] = 0
-        # if dic_measure['0 0'] > dic_measure['0 1']:
-        #         return 1
-        # elif dic_measure['0 0'] <= dic_measure['0 1']:
-        #     return 2
         if not '1 0' in dic_measure:
             dic_measure['1 0'] = 0
         if dic_measure['0 0'] > dic_measure['1 0']:
@@ -153,7 +133,6 @@ def check_post(dic):
     if not '1 1' in dic:
         dic['1 1'] = 0
 
-    # if (dic['1 0'] + dic['1 1']) > (dic['0 0'] + dic['0 1']):
     if (dic['0 1'] + dic['1 1']) < (dic['0 0'] + dic['1 0']):
         return 1
     else:
